@@ -200,7 +200,8 @@
     const med = median(valid.map((r) => r.d.pre_reveal_s));
     valid.forEach((r) => {
       r.d.flag_speeder = med != null && r.d.pre_reveal_s != null && r.d.pre_reveal_s < med / 3;
-      r.d.flags = ["attention", "comprehension", "vignette", "speeder"].filter((f) => r.d["flag_" + f]);
+      r.d.flag_test = String(r.id).indexOf("TEST-") === 0;
+      r.d.flags = ["test", "attention", "comprehension", "vignette", "speeder"].filter((f) => r.d["flag_" + f]);
       const A = r.code.A, B = r.code.B;
       r.d.susp_final = A != null && B != null ? A || B : A != null ? A : B != null ? B : r.d.susp_auto;
       r.d.susp_source = A != null || B != null ? "coded" : "auto";

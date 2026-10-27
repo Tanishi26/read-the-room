@@ -50,8 +50,9 @@
   const params = new URLSearchParams(location.search);
   if (params.has("reset")) { store.del(PROGRESS_KEY); store.del(DONE_KEY); }
 
+  // ?test=1 tags the run as TEST-… so it can be filtered or purged from the sheet.
   let state = store.get(PROGRESS_KEY) || {
-    id: uid(),
+    id: (params.has("test") ? "TEST-" : "") + uid(),
     study: CFG.STUDY_ID,
     started_at: new Date().toISOString(),
     screen: 0,

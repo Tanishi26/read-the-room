@@ -6,6 +6,15 @@
 const ADMIN_KEY = "CHANGE-ME-to-a-long-random-phrase";
 const CONDITIONS = ["C1", "C2", "C3", "C4", "C5", "C6"];
 
+// Run once from the editor: grants permissions and creates the data tabs.
+function setup() {
+  assignmentsSheet();
+  responsesSheet();
+  codesSheet();
+  const blank = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
+  if (blank && blank.getLastRow() === 0) SpreadsheetApp.getActiveSpreadsheet().deleteSheet(blank);
+}
+
 function doGet() {
   return json({ ok: true, message: "Read the Room backend is running." });
 }
@@ -18,6 +27,7 @@ function doPost(e) {
       case "submit": return json(submit(body.record));
       case "admin": requireKey(body.key); return json(adminData());
       case "code": requireKey(body.key); return json(saveCode(body.code));
+      case "purgeTest": requireKey(body.key); return json(purgeTest());
       default: return json({ ok: false, error: "Unknown action" });
     }
   } catch (err) {
@@ -107,6 +117,18 @@ function adminData() {
   const assignments = rows(assignmentsSheet());
   const codes = rows(codesSheet());
   return { ok: true, responses: responses, assignments: assignments, codes: codes };
+}
+
+// Deletes rows whose id starts with "TEST-" (used to verify a fresh deployment).
+function purgeTest() {
+  let removed = 0;
+  [assignmentsSheet(), responsesSheet()].forEach((sh) => {
+    const ids = sh.getRange(1, 1, sh.getLastRow(), 1).getValues();
+    for (let i = ids.length - 1; i >= 1; i--) {
+      if (String(ids[i][0]).indexOf("TEST-") === 0) { sh.deleteRow(i + 1); removed++; }
+    }
+  });
+  return { ok: true, removed: removed };
 }
 
 function saveCode(code) {

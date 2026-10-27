@@ -2,7 +2,7 @@
 window.STUDY_CONFIG = {
   // Google Apps Script web-app URL (see README). Leave empty for LOCAL TEST MODE:
   // responses are then stored only in this browser and shown in admin.html.
-  API_URL: "",
+  API_URL: "https://script.google.com/macros/s/AKfycbxiWQqiXqQOQY3bmtJ8nDW7UrjANbtFm2trVOC1OPgVYCLj6f2qnOc7a3WX5a-cPcxe/exec",
 
   STUDY_ID: "read-the-room-v3",
   TARGET_TOTAL: 240,

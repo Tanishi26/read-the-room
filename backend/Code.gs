@@ -1,5 +1,5 @@
 /**
- * Read the Room — Google Apps Script backend.
+ * Read the Room: Google Apps Script backend.
  * Paste into Extensions → Apps Script of a new Google Sheet, set ADMIN_KEY, deploy as a web app
  * (Execute as: Me · Who has access: Anyone). See README.md.
  */

@@ -174,6 +174,7 @@
     d.mc_urgency = num("Q10_3");
     d.mc_gain = num("Q10_4");
     d.mc_loss = num("Q10_5");
+    d.risk = num("Q10_9");
     d.money = num("L8a");
     d.belief = num("L8b");
     d.exp_loss = d.money != null && d.belief != null ? d.money * (1 - d.belief / 100) : null;
@@ -387,8 +388,14 @@
       table: statTable(rows, "trust"),
     });
 
+    chartCard({
+      title: "Perceived risk", sub: "\"Moving to WhatsApp would be risky\" (Q10.9), 1–7, ± SE. Affect heuristic predicts lower risk under high affect", legend: affectLegend,
+      draw: (el) => Charts.groupedBars(el, { categories: FRAMES.map((f) => CAP[f]), series: affectSeries(rows, "risk"), yMin: 1, yMax: 7 }),
+      table: statTable(rows, "risk"),
+    });
+
     // Manipulation checks: mean per condition, as a table (exact values matter more than shape here).
-    const mcs = [["Affect (Q10.1)", "mc_affect"], ["Urgency (Q10.3)", "mc_urgency"], ["Gain focus (Q10.4)", "mc_gain"], ["Loss focus (Q10.5)", "mc_loss"], ["Realism (Q4.1)", "realism"]];
+    const mcs = [["Affect (Q10.1)", "mc_affect"], ["Urgency (Q10.3)", "mc_urgency"], ["Gain focus (Q10.4)", "mc_gain"], ["Loss focus (Q10.5)", "mc_loss"], ["Perceived risk (Q10.9)", "risk"], ["Realism (Q4.1)", "realism"]];
     const condCols = FRAMES.flatMap((f) => AFFECTS.map((a) => [f, a]));
     const mcCard = h("section", { class: "card wide" },
       h("div", { class: "card-head" }, h("div", {}, h("h3", {}, "Manipulation & mechanism checks"), h("p", { class: "muted small" }, "Cell means (1–7 unless noted). Expect: affect higher in High columns, urgency highest in Urgency, gain > loss focus in Gain."))),
@@ -464,7 +471,7 @@
     DATA.all.forEach((r) => Object.keys(r.answers || {}).forEach((k) => { if (!answerKeys.includes(k)) answerKeys.push(k); }));
     const timingKeys = [];
     DATA.all.forEach((r) => Object.keys(r.timings || {}).forEach((k) => { if (!timingKeys.includes(k)) timingKeys.push(k); }));
-    const derivedKeys = ["f2", "trust", "realism", "ladder", "ladder_pre4", "ladder_post", "reveal_change", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "money", "belief", "exp_loss", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_vignette", "flag_speeder", "susp_auto", "susp_final"];
+    const derivedKeys = ["f2", "trust", "realism", "ladder", "ladder_pre4", "ladder_post", "reveal_change", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "risk", "money", "belief", "exp_loss", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_vignette", "flag_speeder", "susp_auto", "susp_final"];
     const head = ["id", "stage", "withdrawn", "cond", "frame", "affect", "name", "pref", "started_at", "submitted_at", "duration_s", "peeks", "source", "demo"]
       .concat(answerKeys, timingKeys.map((k) => "t_" + k), derivedKeys.map((k) => "d_" + k), ["code_A", "code_B"]);
     const rows = DATA.all.map((r) => {
@@ -516,6 +523,7 @@
       a.Q8_1 = probes[Math.floor(Math.random() * probes.length)];
       a.Q10_1 = clamp(3.5 + (affect === "high" ? 2 : 0) + norm());
       a.Q10_3 = clamp(2.8 + (frame === "urgency" ? 2.5 : 0) + norm()); a.Q10_4 = clamp(3 + (frame === "gain" ? 2 : 0) + norm()); a.Q10_5 = clamp(3 + (frame !== "gain" ? 2 : 0) + norm());
+      a.Q10_9 = clamp(4.6 - (affect === "high" ? 0.9 : 0) - person * 0.4 + norm());
       a.Q10_6 = Math.random() < 0.93 ? 3 : 5; a.Q10_8 = Math.random() < 0.96 ? "WhatsApp" : "Telegram";
       a.Q11_1 = "yes";
       POST_STEPS.forEach((k) => (a[k + "r"] = clamp(a[k] - 1.3 + norm() * 0.6)));

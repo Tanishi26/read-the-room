@@ -12,7 +12,7 @@ The participant site (`index.html`) and admin dashboard (`admin.html`) for Team 
 - ladder L1–L8 + ₹ sent + believed repayment
 - demographics, dating-app use, 3-item loneliness
 - suspicion probe
-- 4 manipulation checks + attention + comprehension
+- 4 manipulation checks + perceived risk + attention + comprehension
 - reveal + re-consent
 - post-reveal ladder (L1, L4, L7, L8) + 2 scam-exposure items
 
@@ -40,9 +40,9 @@ survey-site/
 
 ## 2. Connect the Google Sheet backend (about 10 minutes)
 
-1. Create a new Google Sheet in a team account (e.g., "Read the Room — data").
+1. Create a new Google Sheet in a team account (e.g., "Read the Room data").
 2. **Extensions → Apps Script**. Delete the sample code and paste all of `backend/Code.gs`.
-3. Change `ADMIN_KEY` at the top to a long private phrase. Share it only with Laveena. It never appears in the website code.
+3. Change `ADMIN_KEY` at the top to a long private phrase. Share it only with your teammate. It never appears in the website code.
 4. **Deploy → New deployment → Web app**
    - Execute as: **Me**
    - Who has access: **Anyone**
@@ -63,7 +63,7 @@ Share only the participant link (`…/index.html`). Add `?src=whatsapp` or `?src
 
 ## 4. Before launch checklist
 
-- [ ] `config.js`: fill in `CONTACT` and `APPROVAL`, and keep `INCENTIVES: false` unless it's approved.
+- [ ] `config.js`: keep `INCENTIVES: false` unless it's approved.
 - [ ] Get instructor / IEC sign-off on the consent text, the deception and the debrief.
 - [ ] Run the **pilot (n ≈ 10–15)** using `?src=pilot`, then delete those rows from the sheet (or filter by source) before the main study.
 - [ ] Check the pilot's manipulation checks and completion time on the dashboard.
@@ -95,7 +95,7 @@ Share only the participant link (`…/index.html`). Add `?src=whatsapp` or `?src
   - trust
   - manipulation-check table
 - **Exclusions** (toggle): failed attention check, wrong app in the comprehension check, vignette under 20 s, or total time under one-third of the median.
-- **Suspicion coding:** Tanishi codes as A and Laveena as B, each blind to the other's codes. Cohen's κ updates live. Keyword matches are highlighted.
+- **Suspicion coding:** one teammate codes as A and the other as B, each blind to the other's codes. Cohen's κ updates live. Keyword matches are highlighted.
 - **Export CSV:** one row per participant, with every answer, screen timings, derived variables (`d_` prefix: trust, ladder mean, stop point, reveal change, expected loss, flags…) and both coders' codes. It's ready for R.
 
 ## Known limitations (mention in the report)

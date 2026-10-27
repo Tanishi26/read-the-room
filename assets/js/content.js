@@ -19,7 +19,7 @@ window.STUDY = (function () {
 
   const PROFILE = "24 · Works in product design · Loves trekking and old Hindi film songs";
 
-  // Shared opening — identical in all conditions. who: "them" | "you"
+  // Shared opening, identical in all conditions. who: "them" | "you"
   const OPENING = [
     { who: "them", t: "Hey! How did the presentation go today?", time: "9:12 PM" },
     { who: "you", t: "It went okay actually, better than I expected.", time: "9:13 PM" },
@@ -75,7 +75,7 @@ window.STUDY = (function () {
     { id: "L6", t: "Agree to a video call with {name}" },
     { id: "L7", t: "Share your live location with {name}" },
   ];
-  const L8 = { id: "L8", t: "Send {name} ₹1,000 if {name} said {was} stuck in an emergency and would pay you back the next day" };
+  const L8 = { id: "L8", t: "Send {name} ₹1,000 if {name} said {was} stuck in an emergency and would pay you back within a week" };
 
   // Post-reveal ladder: one step per sensitivity tier (low, medium, high, money) for O4.
   const POST_LADDER = [LADDER[0], LADDER[3], LADDER[6], L8];

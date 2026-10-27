@@ -1,4 +1,4 @@
-// Study configuration — edit these values before launch.
+// Study configuration. Edit these values before launch.
 window.STUDY_CONFIG = {
   // Google Apps Script web-app URL (see README). Leave empty for LOCAL TEST MODE:
   // responses are then stored only in this browser and shown in admin.html.
@@ -12,8 +12,6 @@ window.STUDY_CONFIG = {
   // Only used in local test mode. In live mode the admin key lives in the Apps Script.
   LOCAL_ADMIN_KEY: "team19-local",
 
-  CONTACT: "Tanishi Tyagi & Laveena — [add emails]",
-  APPROVAL: "[instructor / IEC reference]",
 
   // Random incentive system (Part 7 of the study materials). Keep false unless approved.
   INCENTIVES: false,

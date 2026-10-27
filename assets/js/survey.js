@@ -110,8 +110,8 @@
       id: "money", title: "What happens next", lead: "Still imagining the next couple of weeks.", peek: true,
       fields: [
         { type: "likert", scale: S.LIKELY7, items: [S.L8] },
-        { type: "number", id: "L8a", min: 0, max: 5000, prefix: "₹", q: "If {name} asked to borrow money for an emergency and promised to pay it back the next day, what is the most you would send?", note: "Any amount from ₹0 to ₹5,000. Enter 0 if you would not send anything." },
-        { type: "slider", id: "L8b", min: 0, max: 100, suffix: "%", q: "If you sent money, how likely is it that {name} would pay you back within the upcoming week?", left: "0%", right: "100%" },
+        { type: "number", id: "L8a", min: 0, max: 5000, prefix: "₹", q: "If {name} asked to borrow money for an emergency and promised to pay it back within a week, what is the most you would send?", note: "Any amount from ₹0 to ₹5,000. Enter 0 if you would not send anything." },
+        { type: "slider", id: "L8b", min: 0, max: 100, suffix: "%", q: "If you sent money, how likely is it that {name} would pay you back within a week?", left: "0%", right: "100%" },
       ],
     },
     {
@@ -143,6 +143,7 @@
           { id: "Q10_3", t: "{name}'s messages made it feel like a decision had to be made quickly." },
           { id: "Q10_4", t: "{name} focused on what we would gain by moving off the app." },
           { id: "Q10_5", t: "{name} focused on what we would lose by staying on the app." },
+          { id: "Q10_9", t: "Moving the chat to WhatsApp with {name} would be risky." },
           { id: "Q10_6", t: "To show you are reading carefully, please select \"Somewhat disagree\" for this statement." },
         ] },
         { type: "choice", id: "Q10_8", q: "Which app did {name} suggest moving to?", options: ["WhatsApp", "Telegram", "Instagram", "Snapchat", "Don't remember"].map((x) => ({ v: x, label: x })), inline: true },
@@ -535,8 +536,7 @@
     app.appendChild(h("div", { class: "q safety" },
       h("h2", {}, "Staying safe"),
       h("p", {}, "Warning signs include pressure to move off the app quickly, strong emotional language early on, sudden emergencies, and any request for money. In India you can report cyber fraud at ", h("a", { href: "https://cybercrime.gov.in", target: "_blank", rel: "noopener" }, "cybercrime.gov.in"), " or call the ", h("strong", {}, "1930"), " helpline."),
-      h("p", {}, h("strong", {}, "Please don't discuss this study with anyone who might take part."), " It would affect their answers."),
-      h("p", { class: "fine" }, "Questions: " + CFG.CONTACT)));
+      h("p", {}, h("strong", {}, "Please don't discuss this study with anyone who might take part."), " It would affect their answers.")));
   }
 
   // ---------- re-read the chat ----------

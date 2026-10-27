@@ -77,24 +77,13 @@ window.STUDY = (function () {
   ];
   const L8 = { id: "L8", t: "Send {name} ₹1,000 if {name} said {was} stuck in an emergency and would pay you back the next day" };
 
-  const BRACKETS = [
-    { v: 0, label: "₹0", hint: "for free" },
-    { v: 100, label: "₹100" },
-    { v: 500, label: "₹500" },
-    { v: 1000, label: "₹1,000" },
-    { v: 2500, label: "₹2,500" },
-    { v: 5000, label: "₹5,000" },
-    { v: 10000, label: "₹10,000+" },
-    { v: -1, label: "Never", hint: "at any price" },
-  ];
-
-  const GAMBLES = [200, 300, 400, 500, 600, 700].map((loss, i) => ({ id: "G" + (i + 1), win: 600, loss }));
-  const MPL_AMOUNTS = [520, 560, 620, 700, 800, 1000];
+  // Post-reveal ladder: one step per sensitivity tier (low, medium, high, money) for O4.
+  const POST_LADDER = [LADDER[0], LADDER[3], LADDER[6], L8];
 
   const SUSPICION_WORDS = ["scam", "fraud", "catfish", "fake", "decept", "deceiv", "safety", "safe", "manipulat", "pressur", "trick", "persua", "romance scam", "phish"];
 
   return {
     CONDITIONS, NAMES, PROFILE, conversation, M1, M2, M3_REQUEST, M3_CLOSE,
-    AGREE7, LIKELY7, LADDER, L8, BRACKETS, GAMBLES, MPL_AMOUNTS, SUSPICION_WORDS,
+    AGREE7, LIKELY7, LADDER, L8, POST_LADDER, SUSPICION_WORDS,
   };
 })();

@@ -1,6 +1,22 @@
 # Read the Room: survey website
 
-The participant site (`index.html`) and admin dashboard (`admin.html`) for Team 19's Neuroeconomics study, *How Choice Framing and Affective Cues Shape Trust and Compliance in Digital Dating Scams*. All wording follows `study_materials_v2.md` (v2.1).
+The participant site (`index.html`) and admin dashboard (`admin.html`) for Team 19's Neuroeconomics study, *How Choice Framing and Affective Cues Shape Trust and Compliance in Digital Dating Scams*.
+
+**Live:** https://tanishi26.github.io/read-the-room/ · dashboard: `/admin.html`
+
+**Lean survey (v3, about 6–8 minutes, 10 question screens).** Only items that feed the objectives are included:
+- consent + match preference
+- the chat
+- realism / friendly / trustworthy / honest
+- F2 (move to WhatsApp now)
+- ladder L1–L8 + ₹ sent + believed repayment
+- demographics, dating-app use, 3-item loneliness
+- suspicion probe
+- 4 manipulation checks + attention + comprehension
+- reveal + re-consent
+- post-reveal ladder (L1, L4, L7, L8) + 2 scam-exposure items
+
+The extra economic measures from study_materials v2.1 are **not** in the survey: SAM, loss-aversion gambles, time preferences, privacy prices and value of the connection.
 
 ```
 survey-site/
@@ -74,18 +90,16 @@ Share only the participant link (`…/index.html`). Add `?src=whatsapp` or `?src
   - focal compliance
   - ladder by step, separately for each affect level
   - "still complying" curve
-  - reply choice
   - money sent and believed repayment chance
-  - value of the connection
-  - before vs after the reveal
-  - loss-aversion distribution
+  - before vs after the reveal (4 steps)
+  - trust
   - manipulation-check table
 - **Exclusions** (toggle): failed attention check, wrong app in the comprehension check, vignette under 20 s, or total time under one-third of the median.
 - **Suspicion coding:** Tanishi codes as A and Laveena as B, each blind to the other's codes. Cohen's κ updates live. Keyword matches are highlighted.
-- **Export CSV:** one row per participant, with every answer, screen timings, derived variables (`d_` prefix: trust, ladder mean, stop point, λ, switch rows, present bias, flags…) and both coders' codes. It's ready for R.
+- **Export CSV:** one row per participant, with every answer, screen timings, derived variables (`d_` prefix: trust, ladder mean, stop point, reveal change, expected loss, flags…) and both coders' codes. It's ready for R.
 
 ## Known limitations (mention in the report)
 
 - "One response per person" is enforced per browser only. Someone could retake the survey on another device.
 - Anyone with the link can submit. Watch the dashboard for odd patterns.
-- All money questions are hypothetical unless the random incentive system is approved.
+- All money questions are hypothetical.

@@ -7,7 +7,8 @@
   const AFFECTS = ["low", "high"];
   const CAP = { gain: "Gain", loss: "Loss", urgency: "Urgency", low: "Low affect", high: "High affect" };
   const LADDER = ["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8"];
-  const POST_SCREENS = ["reveal", "post", "post2", "redflags", "results"];
+  const POST_STEPS = ["L1", "L4", "L7", "L8"];
+  const POST_SCREENS = ["reveal", "post", "end"];
   const css = (v) => `var(${v})`;
 
   const ui = {
@@ -159,37 +160,27 @@
     const avg = (ids) => mean(ids.map(num));
     const d = {};
     d.f2 = num("F2");
-    d.trust = avg(["Q4_4", "Q4_6", "Q4_8"]);
+    d.trust = avg(["Q4_4", "Q4_6"]);
+    d.realism = num("Q4_1");
     d.ladder = avg(LADDER);
-    d.ladder_post = avg(LADDER.map((x) => x + "r"));
+    d.ladder_pre4 = avg(POST_STEPS);
+    d.ladder_post = avg(POST_STEPS.map((x) => x + "r"));
+    d.reveal_change = d.ladder_post != null && d.ladder_pre4 != null ? d.ladder_post - d.ladder_pre4 : null;
     const stopIdx = LADDER.findIndex((id) => num(id) != null && num(id) <= 3);
     d.stop = stopIdx === -1 ? 9 : stopIdx + 1;
     const lon = ["Q7_12", "Q7_13", "Q7_14"].map(num);
     d.lonely = lon.every((v) => v != null) ? lon.reduce((x, y) => x + y, 0) : null;
-    d.mc_affect = avg(["Q10_1", "Q10_2"]);
+    d.mc_affect = num("Q10_1");
     d.mc_urgency = num("Q10_3");
     d.mc_gain = num("Q10_4");
     d.mc_loss = num("Q10_5");
-    d.valence = num("S1");
-    d.arousal = num("S2");
     d.money = num("L8a");
     d.belief = num("L8b");
     d.exp_loss = d.money != null && d.belief != null ? d.money * (1 - d.belief / 100) : null;
-    d.v1 = a.V1 == null ? null : a.V1 === -1 ? 10000 : Number(a.V1);
-    d.v1_never = a.V1 === -1;
-    const acc = S.GAMBLES.map((g) => a[g.id]);
-    d.loss_rejects = acc.every((x) => x) ? acc.filter((x) => x === "reject").length : null;
-    const firstRej = acc.indexOf("reject");
-    d.loss_monotone = acc.every((x) => x) ? (firstRej === -1 || acc.slice(firstRej).every((x) => x === "reject")) : null;
-    d.lambda = !d.loss_monotone ? null : firstRej === -1 ? 0.8 : firstRej === 0 ? 3.5 : 600 / ((S.GAMBLES[firstRej - 1].loss + S.GAMBLES[firstRej].loss) / 2);
-    const sw = (ids) => { if (!ids.every((id) => a[id])) return null; const i = ids.findIndex((id) => a[id] === "later"); return i === -1 ? 7 : i + 1; };
-    d.switchA = sw(["T1", "T2", "T3", "T4", "T5", "T6"]);
-    d.switchB = sw(["T7", "T8", "T9", "T10", "T11", "T12"]);
-    d.present_bias = d.switchA != null && d.switchB != null ? d.switchA - d.switchB : null;
     const pre = Object.entries(r.timings || {}).filter(([k]) => !POST_SCREENS.includes(k)).reduce((s, [, v]) => s + v, 0);
     d.pre_reveal_s = pre ? Math.round(pre / 1000) : null;
     d.vignette_s = r.timings && r.timings.vignette ? Math.round(r.timings.vignette / 1000) : null;
-    const text = ((a.Q8_1 || "") + " " + (a.Q8_2 || "")).toLowerCase();
+    const text = (a.Q8_1 || "").toLowerCase();
     d.susp_words = S.SUSPICION_WORDS.filter((w) => text.includes(w));
     d.susp_auto = d.susp_words.length > 0;
     d.flag_attention = a.Q10_6 !== 3;
@@ -367,15 +358,6 @@
       table: { head: ["Step"].concat(FRAMES.map((f) => CAP[f])), rows: LADDER.map((id, i) => [id].concat(surv.map((s) => (s.values[i] == null ? "—" : s.values[i].toFixed(0) + "%")))) },
     });
 
-    const replyKeys = [["sure", "Sure!"], ["later", "Maybe later"], ["instagram", "Instagram"], ["noreply", "No reply"], ["unmatch", "Unmatch"]];
-    const replySeries = replyKeys.map(([, n], i) => ({ name: n, color: css("--s" + (i + 1)) }));
-    const replyRows = FRAMES.flatMap((f) => AFFECTS.map((a) => ({ label: `${CAP[f]} · ${a === "low" ? "Low" : "High"}`, counts: replyKeys.map(([k]) => cell(rows, f, a).filter((r) => r.answers.F1 === k).length) })));
-    chartCard({
-      title: "Reply choice (F1)", sub: "Share of each reply within a condition", legend: replySeries.map((s) => ({ ...s })),
-      draw: (el) => Charts.stacked100(el, { rows: replyRows, series: replySeries }),
-      table: { head: ["Condition"].concat(replyKeys.map((k) => k[1])), rows: replyRows.map((r) => [r.label].concat(r.counts)) },
-    });
-
     chartCard({
       title: "Money sent (L8a)", sub: "₹ the participant would send in an emergency, mean ± SE", legend: affectLegend,
       draw: (el) => { const ser = affectSeries(rows, "money"); const max = Math.max(500, ...ser.flatMap((s) => s.values.map((v) => (v.m || 0) + (v.se || 0)))); Charts.groupedBars(el, { categories: FRAMES.map((f) => CAP[f]), series: ser, yMin: 0, yMax: Charts.niceTicks(0, max * 1.1).slice(-1)[0], valueFmt: (v) => "₹" + Math.round(v) }); },
@@ -388,39 +370,32 @@
       table: statTable(rows, "belief", 1),
     });
 
-    chartCard({
-      title: "Value of the connection (V1)", sub: "Median ₹ needed to end the chat (\"no amount\" capped at ₹10,000)", legend: affectLegend,
-      draw: (el) => { const ser = AFFECTS.map((a, i) => ({ name: CAP[a], color: css(i ? "--aff-high" : "--aff-low"), values: FRAMES.map((f) => { const v = cell(rows, f, a).map((r) => r.d.v1); return { m: median(v), n: nums(v).length }; }) })); Charts.groupedBars(el, { categories: FRAMES.map((f) => CAP[f]), series: ser, yMin: 0, yMax: 10000, valueFmt: (v) => "₹" + Math.round(v).toLocaleString("en-IN") }); },
-      table: { head: ["Condition", "Median ₹", "% no amount", "n"], rows: FRAMES.flatMap((f) => AFFECTS.map((a) => { const c = cell(rows, f, a).filter((r) => r.d.v1 != null); return [`${CAP[f]} · ${CAP[a]}`, c.length ? Math.round(median(c.map((r) => r.d.v1))).toLocaleString("en-IN") : "—", c.length ? Math.round((c.filter((r) => r.d.v1_never).length / c.length) * 100) + "%" : "—", c.length]; })) },
-    });
-
     const finals = rows.filter((r) => r.d.ladder_post != null);
     const prePost = [
-      { name: "Before reveal", color: css("--muted-series"), values: LADDER.map((id) => mean(finals.map((r) => Number(r.answers[id]) || null))) },
-      { name: "After reveal", color: css("--s1"), values: LADDER.map((id) => mean(finals.map((r) => Number(r.answers[id + "r"]) || null))) },
+      { name: "Before reveal", color: css("--muted-series"), values: POST_STEPS.map((id) => mean(finals.map((r) => Number(r.answers[id]) || null))) },
+      { name: "After reveal", color: css("--s1"), values: POST_STEPS.map((id) => mean(finals.map((r) => Number(r.answers[id + "r"]) || null))) },
     ];
     chartCard({
-      title: "Before vs after the reveal", sub: `Mean ladder rating, participants who finished (n = ${finals.length})`, legend: prePost.map((s) => ({ name: s.name, color: s.color, line: true })),
-      draw: (el) => Charts.lines(el, { xLabels: LADDER, series: prePost, yMin: 1, yMax: 7 }),
-      table: { head: ["Step", "Before", "After"], rows: LADDER.map((id, i) => [id, prePost[0].values[i] == null ? "—" : prePost[0].values[i].toFixed(2), prePost[1].values[i] == null ? "—" : prePost[1].values[i].toFixed(2)]) },
+      title: "Before vs after the reveal (O4)", sub: `Same 4 ladder steps rated again after the debrief (n = ${finals.length})`, legend: prePost.map((s) => ({ name: s.name, color: s.color, line: true })),
+      draw: (el) => Charts.lines(el, { xLabels: POST_STEPS, series: prePost, yMin: 1, yMax: 7 }),
+      table: { head: ["Step", "Before", "After"], rows: POST_STEPS.map((id, i) => [id, prePost[0].values[i] == null ? "—" : prePost[0].values[i].toFixed(2), prePost[1].values[i] == null ? "—" : prePost[1].values[i].toFixed(2)]) },
     });
 
-    const rej = [0, 1, 2, 3, 4, 5, 6].map((k) => rows.filter((r) => r.d.loss_rejects === k && r.d.loss_monotone).length);
     chartCard({
-      title: "Loss aversion", sub: `Coin flips rejected (0–6). Median λ ≈ ${median(rows.map((r) => r.d.lambda))?.toFixed(2) ?? "—"} · ${rows.filter((r) => r.d.loss_monotone === false).length} multiple switchers excluded`,
-      draw: (el) => Charts.columns(el, { labels: ["0", "1", "2", "3", "4", "5", "6"], values: rej, color: css("--s1") }),
-      table: { head: ["Rejected", "Participants"], rows: rej.map((v, i) => [String(i), v]) },
+      title: "Trust in the match", sub: "Mean of trustworthy + honest (Q4.4, Q4.6), 1–7, ± SE", legend: affectLegend,
+      draw: (el) => Charts.groupedBars(el, { categories: FRAMES.map((f) => CAP[f]), series: affectSeries(rows, "trust"), yMin: 1, yMax: 7 }),
+      table: statTable(rows, "trust"),
     });
 
     // Manipulation checks: mean per condition, as a table (exact values matter more than shape here).
-    const mcs = [["Affect (Q10.1–2)", "mc_affect"], ["Urgency (Q10.3)", "mc_urgency"], ["Gain focus (Q10.4)", "mc_gain"], ["Loss focus (Q10.5)", "mc_loss"], ["Trust (Q4.4/6/8)", "trust"], ["Valence (S1, 1–9)", "valence"], ["Arousal (S2, 1–9)", "arousal"], ["Realism (Q4.1)", null]];
+    const mcs = [["Affect (Q10.1)", "mc_affect"], ["Urgency (Q10.3)", "mc_urgency"], ["Gain focus (Q10.4)", "mc_gain"], ["Loss focus (Q10.5)", "mc_loss"], ["Realism (Q4.1)", "realism"]];
     const condCols = FRAMES.flatMap((f) => AFFECTS.map((a) => [f, a]));
     const mcCard = h("section", { class: "card wide" },
       h("div", { class: "card-head" }, h("div", {}, h("h3", {}, "Manipulation & mechanism checks"), h("p", { class: "muted small" }, "Cell means (1–7 unless noted). Expect: affect higher in High columns, urgency highest in Urgency, gain > loss focus in Gain."))),
       h("div", { class: "scroll-x" }, h("table", { class: "data-table compact" },
         h("thead", {}, h("tr", {}, h("th", {}, "Measure"), condCols.map(([f, a]) => h("th", { class: "num" }, `${CAP[f]} ${a === "low" ? "Low" : "High"}`)))),
         h("tbody", {}, mcs.map(([label, key]) => h("tr", {}, h("th", {}, label), condCols.map(([f, a]) => {
-          const v = mean(cell(rows, f, a).map((r) => (key ? r.d[key] : Number(r.answers.Q4_1) || null)));
+          const v = mean(cell(rows, f, a).map((r) => r.d[key]));
           return h("td", { class: "num" }, v == null ? "—" : v.toFixed(2));
         })))))));
     $("#charts").appendChild(mcCard);
@@ -489,7 +464,7 @@
     DATA.all.forEach((r) => Object.keys(r.answers || {}).forEach((k) => { if (!answerKeys.includes(k)) answerKeys.push(k); }));
     const timingKeys = [];
     DATA.all.forEach((r) => Object.keys(r.timings || {}).forEach((k) => { if (!timingKeys.includes(k)) timingKeys.push(k); }));
-    const derivedKeys = ["f2", "trust", "ladder", "ladder_post", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "valence", "arousal", "money", "belief", "exp_loss", "v1", "v1_never", "loss_rejects", "loss_monotone", "lambda", "switchA", "switchB", "present_bias", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_vignette", "flag_speeder", "susp_auto", "susp_final"];
+    const derivedKeys = ["f2", "trust", "realism", "ladder", "ladder_pre4", "ladder_post", "reveal_change", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "money", "belief", "exp_loss", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_vignette", "flag_speeder", "susp_auto", "susp_final"];
     const head = ["id", "stage", "withdrawn", "cond", "frame", "affect", "name", "pref", "started_at", "submitted_at", "duration_s", "peeks", "source", "demo"]
       .concat(answerKeys, timingKeys.map((k) => "t_" + k), derivedKeys.map((k) => "d_" + k), ["code_A", "code_B"]);
     const rows = DATA.all.map((r) => {
@@ -527,34 +502,25 @@
       const person = norm() * 0.9;
       const base = 3.4 + fe + person;
       const a = { Q1_1: "yes", Q1_2: "agree", Q1_3: pref };
-      a.S1 = clamp(5 + (affect === "high" ? 1.2 : 0) + norm(), 1, 9);
-      a.S2 = clamp(4 + (frame === "urgency" ? 1.3 : 0) + norm(), 1, 9);
-      ["Q4_1", "Q4_2", "Q4_3", "Q4_5", "Q4_7"].forEach((k) => (a[k] = clamp(5 + norm())));
-      ["Q4_4", "Q4_6", "Q4_8"].forEach((k) => (a[k] = clamp(4 + (affect === "high" ? 0.7 : 0) + person * 0.6 + norm() * 0.8)));
+      ["Q4_1", "Q4_2"].forEach((k) => (a[k] = clamp(5 + norm())));
+      ["Q4_4", "Q4_6"].forEach((k) => (a[k] = clamp(4 + (affect === "high" ? 0.7 : 0) + person * 0.6 + norm() * 0.8)));
       a.F2 = clamp(base + norm() * 0.8);
-      a.F1 = a.F2 >= 6 ? "sure" : a.F2 >= 4 ? (Math.random() < 0.7 ? "later" : "instagram") : a.F2 >= 2 ? "noreply" : "unmatch";
-      LADDER.forEach((k, j) => (a[k] = clamp(base + 1.6 - j * 0.62 + norm() * 0.7 - (j === 7 ? 1 : 0))));
+      LADDER.forEach((k, j) => (a[k] = clamp(base + 1.6 - j * 0.62 + norm() * 0.7)));
+      a.L8 = clamp(base - 2.6 + norm() * 0.7);
       a.L8a = Math.random() < 0.45 ? 0 : Math.round(rnd(100, 600 + fe * 600) / 50) * 50;
       a.L8b = Math.round(Math.max(0, Math.min(100, 45 + fe * 10 + norm() * 20)));
-      a.V1 = [0, 100, 500, 1000, 2500, 5000, 10000, -1][clamp(2.5 + (affect === "high" ? 1.2 : 0) + norm() * 1.3, 0, 7)];
       a.Q7_1 = Math.round(rnd(18, 26)); a.Q7_2 = Math.random() < 0.5 ? "woman" : "man"; a.Q7_3 = "ug"; a.Q7_4 = Math.random() < 0.7 ? "single" : "relationship";
       a.Q7_5 = ["never", "past", "current"][Math.floor(Math.random() * 3)]; if (a.Q7_5 !== "never") a.Q7_6 = "1-5";
       if (name === "Kiran") a.Q7_7 = "didnt";
-      a.Q7_8 = clamp(4 + norm()); ["Q7_9", "Q7_10", "Q7_11"].forEach((k) => (a[k] = clamp(4.5 + norm())));
       ["Q7_12", "Q7_13", "Q7_14"].forEach((k) => (a[k] = clamp(1.8 + norm() * 0.7, 1, 3)));
       a.Q8_1 = probes[Math.floor(Math.random() * probes.length)];
-      const lam = Math.exp(Math.log(2) + norm() * 0.4);
-      S.GAMBLES.forEach((g) => (a[g.id] = g.win / g.loss > lam ? "accept" : "reject"));
-      const sA = clamp(3 + norm() * 1.5, 1, 7), sB = clamp(sA - (Math.random() < 0.4 ? 1 : 0), 1, 7);
-      [1, 2, 3, 4, 5, 6].forEach((k) => { a["T" + k] = k >= sA ? "later" : "sooner"; a["T" + (k + 6)] = k >= sB ? "later" : "sooner"; });
-      ["P2", "P3", "P4", "P5", "P6", "P7"].forEach((k, j) => (a[k] = [0, 100, 500, 1000, 2500, 5000, 10000, -1][clamp(j + norm() * 1.2, 0, 7)]));
-      a.Q10_1 = clamp(3.5 + (affect === "high" ? 2 : 0) + norm()); a.Q10_2 = clamp(3.5 + (affect === "high" ? 2 : 0) + norm());
+      a.Q10_1 = clamp(3.5 + (affect === "high" ? 2 : 0) + norm());
       a.Q10_3 = clamp(2.8 + (frame === "urgency" ? 2.5 : 0) + norm()); a.Q10_4 = clamp(3 + (frame === "gain" ? 2 : 0) + norm()); a.Q10_5 = clamp(3 + (frame !== "gain" ? 2 : 0) + norm());
-      a.Q10_6 = Math.random() < 0.93 ? 3 : 5; a.Q10_7 = clamp(5 + norm()); a.Q10_8 = Math.random() < 0.96 ? "WhatsApp" : "Telegram";
+      a.Q10_6 = Math.random() < 0.93 ? 3 : 5; a.Q10_8 = Math.random() < 0.96 ? "WhatsApp" : "Telegram";
       a.Q11_1 = "yes";
-      LADDER.forEach((k) => (a[k + "r"] = clamp(a[k] - 1.3 + norm() * 0.6)));
-      a.Q12_1 = "no"; a.Q12_2 = "unsure"; a.Q12_3 = "no";
-      const timings = { welcome: 6000, consent: 25000, pref: 5000, instructions: 12000, vignette: rnd(21000, 60000), sam: 9000, impressions: 30000, reply: 15000, ladder: 25000, money: 25000, value: 10000, about1: 20000, about2: 18000, habits: 20000, probe: 25000, gambles: 25000, mplA: 18000, mplB: 18000, privacy: 30000, features: 30000, reveal: 15000, post: 20000, post2: 20000, redflags: 20000 };
+      POST_STEPS.forEach((k) => (a[k + "r"] = clamp(a[k] - 1.3 + norm() * 0.6)));
+      a.Q12_2 = "unsure"; a.Q12_3 = "no";
+      const timings = { welcome: 6000, consent: 30000, instructions: 12000, vignette: rnd(21000, 60000), impressions: 18000, reply: 8000, ladder: 25000, money: 25000, about: 40000, probe: 25000, checks: 25000, reveal: 15000, post: 25000 };
       if (Math.random() < 0.04) Object.keys(timings).forEach((k) => (timings[k] *= 0.2));
       resp.push({ id, study: CFG.STUDY_ID, stage: "final", cond, frame, affect, name, pref, started_at: new Date().toISOString(), submitted_at: new Date().toISOString(), duration_s: 600, answers: a, timings, peeks: 0, meta: { demo: true, mode: "local" } });
     }

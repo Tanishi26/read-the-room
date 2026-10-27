@@ -4,7 +4,7 @@ window.STUDY_CONFIG = {
   // responses are then stored only in this browser and shown in admin.html.
   API_URL: "",
 
-  STUDY_ID: "read-the-room-v2.1",
+  STUDY_ID: "read-the-room-v3",
   TARGET_TOTAL: 240,
   TARGET_PER_CELL: 40,
   MIN_VIGNETTE_SECONDS: 20,

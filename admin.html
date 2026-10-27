@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Study Admin</title>
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-inner">
+      <div class="title">
+        <strong>Read the Room</strong> <span class="muted">· Admin</span>
+        <span id="mode" class="mode"></span>
+      </div>
+      <div class="actions">
+        <span id="status" class="muted small"></span>
+        <button id="theme" class="btn ghost" type="button" aria-label="Toggle dark mode">◐</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="login" class="login card" hidden>
+      <h1>Admin sign-in</h1>
+      <p class="muted">Enter the admin key to view responses.</p>
+      <form id="login-form">
+        <label for="key">Admin key</label>
+        <input id="key" type="password" autocomplete="current-password" required>
+        <button class="btn primary" type="submit">View dashboard</button>
+      </form>
+      <p id="login-error" class="error" role="alert"></p>
+      <p id="login-hint" class="muted small"></p>
+    </section>
+
+    <div id="dash" hidden>
+      <div class="filters">
+        <label class="check"><input id="f-excl" type="checkbox" checked> Apply exclusions</label>
+        <label class="check"><input id="f-susp" type="checkbox"> Exclude suspicious</label>
+        <label class="select">Match
+          <select id="f-match">
+            <option value="all">All versions</option>
+            <option>Arjun</option>
+            <option>Ananya</option>
+            <option>Kiran</option>
+          </select>
+        </label>
+        <span class="spacer"></span>
+        <span id="local-tools" hidden>
+          <button id="demo" class="btn ghost" type="button">+ 120 demo responses</button>
+          <button id="clear" class="btn ghost danger" type="button">Clear local data</button>
+        </span>
+        <button id="refresh" class="btn ghost" type="button">↻ Refresh</button>
+        <button id="export-csv" class="btn primary" type="button">Export CSV</button>
+        <button id="export-json" class="btn ghost" type="button">JSON</button>
+        <button id="logout" class="btn ghost" type="button">Sign out</button>
+      </div>
+
+      <section id="kpis" class="kpis" aria-label="Key numbers"></section>
+
+      <div class="row">
+        <section class="card">
+          <div class="card-head"><div><h3>Cell balance</h3><p class="muted small">Analysable responses per condition vs target</p></div></div>
+          <div id="balance"></div>
+        </section>
+        <section class="card">
+          <div class="card-head">
+            <div><h3>Quick stats</h3><p class="muted small">2 × 3 ANOVA + planned contrasts, on current filters</p></div>
+            <select id="stat-dv" aria-label="Outcome">
+              <option value="f2">F2 focal</option>
+              <option value="ladder">Ladder mean</option>
+              <option value="money">₹ sent</option>
+            </select>
+          </div>
+          <div id="stats"></div>
+        </section>
+      </div>
+
+      <h2 class="section-title">Results</h2>
+      <div id="charts" class="charts"></div>
+
+      <h2 class="section-title">Suspicion coding</h2>
+      <section class="card wide">
+        <div class="card-head">
+          <div><h3>Code the probe answers (Q8.1 / Q8.2)</h3><p class="muted small">Code blind: the other coder's codes are hidden. <span id="kappa"></span></p></div>
+          <div class="inline-controls">
+            <label class="select">I am coder
+              <select id="coder"><option>A</option><option>B</option></select>
+            </label>
+            <label class="check"><input id="only-uncoded" type="checkbox"> Only uncoded</label>
+          </div>
+        </div>
+        <div id="coding" class="coding"></div>
+      </section>
+
+      <h2 class="section-title">Responses</h2>
+      <section class="card wide">
+        <div class="card-head">
+          <div><h3>All submissions</h3><p class="muted small">Newest first · click a row for the full record</p></div>
+          <input id="search" type="search" placeholder="Search id, condition, text…" aria-label="Search responses">
+        </div>
+        <div class="scroll-x tall">
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>Submitted</th><th>Stage</th><th>Condition</th><th>Match</th><th class="num">Min</th><th>Flags</th><th class="num">F2</th><th class="num">Ladder</th><th class="num">₹ sent</th></tr></thead>
+            <tbody id="resp-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="detail">
+    <div class="card-head"><h3 id="detail-title"></h3><button id="detail-close" class="btn ghost" type="button">Close</button></div>
+    <pre id="detail-body"></pre>
+  </dialog>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/content.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/charts.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

@@ -111,7 +111,7 @@
       fields: [
         { type: "likert", scale: S.LIKELY7, items: [S.L8] },
         { type: "number", id: "L8a", min: 0, max: 5000, prefix: "₹", q: "If {name} asked to borrow money for an emergency and promised to pay it back the next day, what is the most you would send?", note: "Any amount from ₹0 to ₹5,000. Enter 0 if you would not send anything." },
-        { type: "slider", id: "L8b", min: 0, max: 100, suffix: "%", q: "If you sent money, how likely is it that {name} would pay you back the next day?", left: "0%", right: "100%" },
+        { type: "slider", id: "L8b", min: 0, max: 100, suffix: "%", q: "If you sent money, how likely is it that {name} would pay you back within the upcoming week?", left: "0%", right: "100%" },
       ],
     },
     {
@@ -175,8 +175,7 @@
 
   function consentHTML() {
     return `<p><strong>Read the Room</strong> is a study on <em>tone and getting to know people online</em> by students at IIIT Hyderabad. You'll read a short chat and answer questions about it, about what you might do next, and about yourself. It takes about <strong>6–8 minutes</strong>.</p>
-      <p>Taking part is voluntary and you can stop at any time. We don't collect your name or contact details, and responses are used only for research in anonymised form. <strong>Some details about the study's aims will be explained at the end.</strong></p>
-      <p class="fine">Contact: ${CFG.CONTACT} · Course: Neuroeconomics, IIIT Hyderabad · Approval: ${CFG.APPROVAL}</p>`;
+      <p>Taking part is voluntary and you can stop at any time. We don't collect your name or contact details, and responses are used only for research in anonymised form. <strong>Some details about the study's aims will be explained at the end.</strong></p>`;
   }
 
   // ---------- flow ----------
@@ -434,7 +433,7 @@
         h("div", { class: "typing pop", style: "--d:1.2s" }, h("i"), h("i"), h("i"))),
       h("h1", { class: "title" }, "Read the Room"),
       h("p", { class: "lead" }, "A short study on how the tone of online chats shapes the way we get to know people. You'll read one dating-app conversation and tell us what you would do next."),
-      h("ul", { class: "facts" }, h("li", {}, h("b", {}, "6–8 min")), h("li", {}, h("b", {}, "Anonymous")), h("li", {}, h("b", {}, "Works on your phone")))));
+      h("ul", { class: "facts" }, h("li", {}, h("b", {}, "6–8 min")), h("li", {}, h("b", {}, "Anonymous")))));
   }
 
   function renderInstructions() {

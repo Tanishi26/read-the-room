@@ -175,6 +175,8 @@
     d.mc_gain = num("Q10_4");
     d.mc_loss = num("Q10_5");
     d.risk = num("Q10_9");
+    // Loss aversion from one mixed gamble: required win / ₹500 loss (λ ≈ 2 is typical).
+    d.lambda = num("LA1") != null ? num("LA1") / 500 : null;
     d.money = num("L8a");
     d.belief = num("L8b");
     d.exp_loss = d.money != null && d.belief != null ? d.money * (1 - d.belief / 100) : null;
@@ -255,8 +257,9 @@
     const excluded = DATA.valid.filter((r) => r.d.flags.length).length;
     const susp = DATA.valid.filter((r) => r.d.susp_final).length;
     el.appendChild(tile("Started", (RAW.assignments || []).length, "assigned to a condition"));
-    el.appendChild(tile("Consented at reveal", DATA.valid.length, DATA.valid.filter((r) => r.stage === "final").length + " finished everything"));
-    el.appendChild(tile("Withdrew", DATA.withdrawn.length, "data deleted at reveal"));
+    const started = (RAW.assignments || []).length;
+    el.appendChild(tile("Submitted", DATA.valid.length, "completed the survey"));
+    el.appendChild(tile("Dropped out", Math.max(0, started - DATA.valid.length), started ? Math.round((Math.max(0, started - DATA.valid.length) / started) * 100) + "% of those who started" : "started but didn't submit"));
     el.appendChild(tile("Flagged for exclusion", excluded, "attention, comprehension, speed"));
     el.appendChild(tile("Suspicious", susp, "auto keyword or coded"));
     el.appendChild(tile("Median time", DATA.median ? Math.round(DATA.median / 60) + " min" : "—", "before the reveal"));
@@ -394,6 +397,21 @@
       table: statTable(rows, "risk"),
     });
 
+    const lamBins = [["< 1", 0, 1], ["1–1.5", 1, 1.5], ["1.5–2", 1.5, 2], ["2–2.5", 2, 2.5], ["2.5–3", 2.5, 3], ["3+", 3, Infinity]];
+    const lamCounts = lamBins.map(([, lo, hi]) => rows.filter((r) => r.d.lambda != null && r.d.lambda >= lo && r.d.lambda < hi).length);
+    const lamMed = median(rows.map((r) => r.d.lambda));
+    const lossGap = (pick) => {
+      const hiL = rows.filter(pick);
+      const g = mean(cell(hiL, "loss").map((r) => r.d.f2)), gn = mean(cell(hiL, "gain").map((r) => r.d.f2));
+      return g != null && gn != null ? (g - gn).toFixed(2) : "—";
+    };
+    chartCard({
+      title: "Loss aversion (λ)",
+      sub: `Required win ÷ ₹500 loss. Median λ = ${lamMed == null ? "—" : lamMed.toFixed(2)}. Loss − Gain gap on F2: ${lossGap((r) => lamMed != null && r.d.lambda > lamMed)} above median λ vs ${lossGap((r) => lamMed != null && r.d.lambda != null && r.d.lambda <= lamMed)} at or below`,
+      draw: (el) => Charts.columns(el, { labels: lamBins.map((b) => b[0]), values: lamCounts, color: css("--s1") }),
+      table: { head: ["λ range", "Participants"], rows: lamBins.map((b, i) => [b[0], lamCounts[i]]) },
+    });
+
     // Manipulation checks: mean per condition, as a table (exact values matter more than shape here).
     const mcs = [["Affect (Q10.1)", "mc_affect"], ["Urgency (Q10.3)", "mc_urgency"], ["Gain focus (Q10.4)", "mc_gain"], ["Loss focus (Q10.5)", "mc_loss"], ["Perceived risk (Q10.9)", "risk"], ["Realism (Q4.1)", "realism"]];
     const condCols = FRAMES.flatMap((f) => AFFECTS.map((a) => [f, a]));
@@ -471,7 +489,7 @@
     DATA.all.forEach((r) => Object.keys(r.answers || {}).forEach((k) => { if (!answerKeys.includes(k)) answerKeys.push(k); }));
     const timingKeys = [];
     DATA.all.forEach((r) => Object.keys(r.timings || {}).forEach((k) => { if (!timingKeys.includes(k)) timingKeys.push(k); }));
-    const derivedKeys = ["f2", "trust", "realism", "ladder", "ladder_pre4", "ladder_post", "reveal_change", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "risk", "money", "belief", "exp_loss", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_vignette", "flag_speeder", "susp_auto", "susp_final"];
+    const derivedKeys = ["f2", "trust", "realism", "ladder", "ladder_pre4", "ladder_post", "reveal_change", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "risk", "lambda", "money", "belief", "exp_loss", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_vignette", "flag_speeder", "susp_auto", "susp_final"];
     const head = ["id", "stage", "withdrawn", "cond", "frame", "affect", "name", "pref", "started_at", "submitted_at", "duration_s", "peeks", "source", "demo"]
       .concat(answerKeys, timingKeys.map((k) => "t_" + k), derivedKeys.map((k) => "d_" + k), ["code_A", "code_B"]);
     const rows = DATA.all.map((r) => {
@@ -504,7 +522,7 @@
       const name = pref === "men" ? "Arjun" : pref === "women" ? "Ananya" : pref === "none" ? "Kiran" : Math.random() < 0.5 ? "Arjun" : "Ananya";
       const id = "DEMO" + Date.now().toString(36).toUpperCase() + i;
       asg.push({ id, ts: new Date().toISOString(), pref, cond, name });
-      if (Math.random() < 0.04) { resp.push({ id, cond, name, pref, withdrawn: true, stage: "withdrawn", submitted_at: new Date().toISOString() }); continue; }
+      if (Math.random() < 0.06) continue; // started but never submitted
       const fe = { gain: 0, loss: 0.45, urgency: 0.85 }[frame] + (affect === "high" ? 0.6 : 0) + (frame === "urgency" && affect === "high" ? 0.4 : 0);
       const person = norm() * 0.9;
       const base = 3.4 + fe + person;
@@ -523,9 +541,9 @@
       a.Q8_1 = probes[Math.floor(Math.random() * probes.length)];
       a.Q10_1 = clamp(3.5 + (affect === "high" ? 2 : 0) + norm());
       a.Q10_3 = clamp(2.8 + (frame === "urgency" ? 2.5 : 0) + norm()); a.Q10_4 = clamp(3 + (frame === "gain" ? 2 : 0) + norm()); a.Q10_5 = clamp(3 + (frame !== "gain" ? 2 : 0) + norm());
+      a.LA1 = Math.round((500 * Math.exp(Math.log(2) + norm() * 0.35)) / 50) * 50;
       a.Q10_9 = clamp(4.6 - (affect === "high" ? 0.9 : 0) - person * 0.4 + norm());
       a.Q10_6 = Math.random() < 0.93 ? 3 : 5; a.Q10_8 = Math.random() < 0.96 ? "WhatsApp" : "Telegram";
-      a.Q11_1 = "yes";
       POST_STEPS.forEach((k) => (a[k + "r"] = clamp(a[k] - 1.3 + norm() * 0.6)));
       a.Q12_2 = "unsure"; a.Q12_3 = "no";
       const timings = { welcome: 6000, consent: 30000, instructions: 12000, vignette: rnd(21000, 60000), impressions: 18000, reply: 8000, ladder: 25000, money: 25000, about: 40000, probe: 25000, checks: 25000, reveal: 15000, post: 25000 };

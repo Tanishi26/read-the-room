@@ -129,6 +129,7 @@
           { id: "Q7_13", t: "How often do you feel left out?" },
           { id: "Q7_14", t: "How often do you feel isolated from others?" },
         ] },
+        { type: "number", id: "LA1", min: 0, max: 50000, prefix: "₹", q: "Imagine a coin flip. If it lands tails, you lose ₹500. What is the smallest amount you would need to win on heads to accept the flip?", note: "There is no right answer. Enter the amount that would make the flip worth it to you." },
       ],
     },
     {
@@ -149,17 +150,7 @@
         { type: "choice", id: "Q10_8", q: "Which app did {name} suggest moving to?", options: ["WhatsApp", "Telegram", "Instagram", "Snapchat", "Don't remember"].map((x) => ({ v: x, label: x })), inline: true },
       ],
     },
-    {
-      id: "reveal", kind: "reveal",
-      fields: [{ type: "choice", id: "Q11_1", q: "Now that you know the real purpose, are you still happy for your responses to be used?", options: [{ v: "yes", label: "Yes, use my responses" }, { v: "no", label: "No, delete my responses" }] }],
-      onNext: async () => {
-        if (A.Q11_1 === "no") {
-          await safeSubmit({ id: state.id, cond: state.cond, name: state.name, pref: A.Q1_3 || "none", withdrawn: true, stage: "withdrawn" });
-          return end("withdrawn");
-        }
-        return safeSubmit(record("pre"));
-      },
-    },
+    { id: "reveal", kind: "reveal" },
     {
       id: "post", title: "Last questions",
       lead: "Knowing this study is about online dating scams, think about the same conversation again. How likely would you be to:",
@@ -274,10 +265,8 @@
 
   function end(kind) {
     store.del(PROGRESS_KEY);
-    if (kind === "withdrawn") store.set(DONE_KEY, true);
     const msgs = {
       ineligible: ["Thanks for stopping by", "This study is only for adults who agree to take part, so it ends here. No answers were saved."],
-      withdrawn: ["Your responses have been deleted", "Thank you for your time. Please don't discuss this study with others who might take part."],
       done: ["You've already taken part", "Thank you. Each person can take part only once."],
     };
     const [t, l] = msgs[kind];
@@ -490,15 +479,12 @@
     nextHint.textContent = "";
   }
 
-  function renderReveal(s) {
+  function renderReveal() {
     app.appendChild(h("h1", {}, "What this study is actually about"));
     app.appendChild(h("div", { class: "q reveal" },
       h("p", {}, "This study looks at how the ", h("em", {}, "wording"), " of messages from an online match affects people's willingness to share personal information or take risks, which matters for understanding ", h("strong", {}, "online dating scams"), ". We described it as a study on tone because knowing the real aim in advance can change how people answer."),
       h("p", {}, state.name + " is fictional. Different participants saw different versions of the conversation: some more emotional, some describing what would be gained or lost, and some with time pressure."),
       h("p", {}, h("strong", {}, "There are no right or wrong answers."), " Many people respond to these messages exactly as you did, which is why this research matters.")));
-    const wrap = h("div", { class: "fields" });
-    s.fields.forEach((f) => wrap.appendChild(FIELD[f.type](f)));
-    app.appendChild(wrap);
   }
 
   // Debrief: the warning signs in this participant's own version of the chat.

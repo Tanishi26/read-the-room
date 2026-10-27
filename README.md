@@ -10,10 +10,10 @@ The participant site (`index.html`) and admin dashboard (`admin.html`) for Team 
 - realism / friendly / trustworthy / honest
 - F2 (move to WhatsApp now)
 - ladder L1–L8 + ₹ sent + believed repayment
-- demographics, dating-app use, 3-item loneliness
+- demographics, dating-app use, 3-item loneliness, one-question loss aversion (λ)
 - suspicion probe
 - 4 manipulation checks + perceived risk + attention + comprehension
-- reveal + re-consent
+- reveal (debrief, no questions)
 - post-reveal ladder (L1, L4, L7, L8) + 2 scam-exposure items
 
 The extra economic measures from study_materials v2.1 are **not** in the survey: SAM, loss-aversion gambles, time preferences, privacy prices and value of the connection.
@@ -79,7 +79,7 @@ Share only the participant link (`…/index.html`). Add `?src=whatsapp` or `?src
   - The vignette can't be skipped (Continue unlocks after the chat finishes and 20 s have passed).
   - No item before the suspicion probe mentions scams.
   - Scale buttons show their verbal label (needed for the attention check).
-- **Saving:** data is saved only **after re-consent at the reveal** (stage `pre`), then updated at the end (stage `final`). If someone chooses "delete my responses", only a `withdrawn` marker is kept, for attrition counts.
+- **Saving:** responses are saved once, when the participant taps **Submit** on the last page. People who leave earlier are counted as "Dropped out" on the dashboard (started minus submitted).
 - **Refresh-safe:** progress is kept if the page reloads, so participants aren't re-randomised. Each browser can take part once.
 
 ## Dashboard

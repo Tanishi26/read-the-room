@@ -14,7 +14,6 @@
   const ui = {
     key: sessionGet("rtr_admin_key"),
     applyExcl: true,
-    exclSusp: false,
     match: "all",
     coder: localGet("rtr_coder") || "A",
     onlyUncoded: false,
@@ -194,25 +193,18 @@
   }
 
   function process() {
-    const codes = {};
-    (RAW.codes || []).forEach((c) => { (codes[c.response_id] = codes[c.response_id] || {})[c.coder] = c.suspicious === true || c.suspicious === "true"; });
-    const all = (RAW.responses || []).map((r) => ({ ...r, d: r.withdrawn || r.stage === "withdrawn" ? {} : derive(r), code: codes[r.id] || {} }));
+    const all = (RAW.responses || []).map((r) => ({ ...r, d: r.withdrawn || r.stage === "withdrawn" ? {} : derive(r) }));
     const valid = all.filter((r) => !(r.withdrawn || r.stage === "withdrawn"));
     const med = median(valid.map((r) => r.d.pre_reveal_s));
     valid.forEach((r) => {
       r.d.flag_test = String(r.id).indexOf("TEST-") === 0;
       r.d.flags = ["test", "inattentive"].filter((f) => r.d["flag_" + f]);
-      // Single failed checks are shown for information but do not exclude.
-      r.d.notes = r.d.flag_inattentive ? [] : ["attention", "comprehension"].filter((f) => r.d["flag_" + f]).map((f) => f + " check missed");
-      const A = r.code.A, B = r.code.B;
-      r.d.susp_final = A != null && B != null ? A || B : A != null ? A : B != null ? B : r.d.susp_auto;
-      r.d.susp_source = A != null || B != null ? "coded" : "auto";
     });
-    DATA = { all, valid, withdrawn: all.filter((r) => r.withdrawn || r.stage === "withdrawn"), median: med, codes };
+    DATA = { all, valid, withdrawn: all.filter((r) => r.withdrawn || r.stage === "withdrawn"), median: med };
   }
 
   function filtered() {
-    return DATA.valid.filter((r) => (!ui.applyExcl || !r.d.flags.length) && (!ui.exclSusp || !r.d.susp_final) && (ui.match === "all" || r.name === ui.match));
+    return DATA.valid.filter((r) => (!ui.applyExcl || !r.d.flags.length) && (ui.match === "all" || r.name === ui.match));
   }
   const cell = (rows, f, a) => rows.filter((r) => r.frame === f && (a == null || r.affect === a));
 
@@ -240,7 +232,6 @@
     renderBalance(rows);
     renderStats(rows);
     renderCharts(rows);
-    renderCoding();
     renderTable();
   }
 
@@ -256,13 +247,11 @@
       h("div", { class: "hero-value" }, rows.length),
       h("div", { class: "tile-sub" }, "after the current filters")));
     const excluded = DATA.valid.filter((r) => r.d.flags.length).length;
-    const susp = DATA.valid.filter((r) => r.d.susp_final).length;
     el.appendChild(tile("Started", (RAW.assignments || []).length, "assigned to a condition"));
     const started = (RAW.assignments || []).length;
     el.appendChild(tile("Submitted", DATA.valid.length, "completed the survey"));
     el.appendChild(tile("Dropped out", Math.max(0, started - DATA.valid.length), started ? Math.round((Math.max(0, started - DATA.valid.length) / started) * 100) + "% of those who started" : "started but didn't submit"));
     el.appendChild(tile("Excluded", excluded, "failed both attention and app checks, or test runs"));
-    el.appendChild(tile("Suspicious", susp, "auto keyword or coded"));
     el.appendChild(tile("Median time", DATA.median ? Math.round(DATA.median / 60) + " min" : "—", "before the reveal"));
   }
 
@@ -425,40 +414,6 @@
     $("#charts").appendChild(mcCard);
   }
 
-  // ---------- suspicion coding ----------
-  function renderCoding() {
-    const el = $("#coding");
-    el.innerHTML = "";
-    const pairs = DATA.valid.filter((r) => r.code.A != null && r.code.B != null).map((r) => [r.code.A, r.code.B]);
-    const k = kappa(pairs);
-    $("#kappa").textContent = k ? `Cohen's κ = ${k.k.toFixed(2)} · agreement ${(k.po * 100).toFixed(0)}% · ${k.n} double-coded` : "κ appears once both coders have coded the same responses";
-    const mine = (r) => r.code[ui.coder];
-    const list = DATA.valid.filter((r) => !ui.onlyUncoded || mine(r) == null).slice().reverse();
-    if (!list.length) { el.appendChild(h("p", { class: "muted" }, "Nothing to code.")); return; }
-    list.forEach((r) => {
-      let txt = esc(r.answers.Q8_1 || "(no answer)");
-      S.SUSPICION_WORDS.forEach((w) => { txt = txt.replace(new RegExp("(" + w + "\\w*)", "gi"), "<mark>$1</mark>"); });
-      const state = mine(r);
-      const btn = (val, label) => h("button", { type: "button", class: "seg" + (state === val ? " on" : ""), onclick: async (e) => {
-        e.currentTarget.parentNode.querySelectorAll(".seg").forEach((b) => b.classList.remove("on"));
-        e.currentTarget.classList.add("on");
-        r.code[ui.coder] = val;
-        try {
-          await window.API.saveCode(ui.key, { response_id: r.id, coder: ui.coder, suspicious: val });
-          RAW.codes = (RAW.codes || []).filter((c) => !(c.response_id === r.id && c.coder === ui.coder)).concat([{ response_id: r.id, coder: ui.coder, suspicious: val }]);
-          process();
-          renderKPIs(filtered());
-          const pr = DATA.valid.filter((x) => x.code.A != null && x.code.B != null).map((x) => [x.code.A, x.code.B]);
-          const kk = kappa(pr);
-          $("#kappa").textContent = kk ? `Cohen's κ = ${kk.k.toFixed(2)} · agreement ${(kk.po * 100).toFixed(0)}% · ${kk.n} double-coded` : "κ appears once both coders have coded the same responses";
-        } catch (err) { alert("Could not save code: " + err.message); }
-      } }, label);
-      el.appendChild(h("div", { class: "code-row" },
-        h("div", { class: "code-text" }, h("div", { class: "muted small" }, r.id + (r.d.susp_auto ? " · keyword match" : "")), h("p", { html: txt })),
-        h("div", { class: "segs" }, btn(true, "Suspicious"), btn(false, "Not suspicious"))));
-    });
-  }
-
   // ---------- table + detail ----------
   function renderTable() {
     const tb = $("#resp-body");
@@ -466,11 +421,10 @@
     const q = ui.query.toLowerCase();
     DATA.all.slice().reverse().filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q)).slice(0, 300).forEach((r) => {
       const w = r.withdrawn || r.stage === "withdrawn";
-      const flags = w ? [h("span", { class: "pill" }, "withdrawn")] : r.d.flags.map((f) => h("span", { class: "pill warn" }, f)).concat(r.d.notes.map((n) => h("span", { class: "pill info" }, n)),r.d.susp_final ? [h("span", { class: "pill" }, "suspicious")] : []);
       tb.appendChild(h("tr", { class: "clickable", tabindex: 0, onclick: () => detail(r), onkeydown: (e) => { if (e.key === "Enter") detail(r); } },
         h("td", { class: "mono" }, r.id), h("td", {}, r.submitted_at ? new Date(r.submitted_at).toLocaleString() : "—"), h("td", {}, r.stage || "—"),
         h("td", {}, r.cond ? `${r.cond} ${CAP[S.CONDITIONS[r.cond].frame]}·${S.CONDITIONS[r.cond].affect}` : "—"), h("td", {}, r.name || "—"),
-        h("td", { class: "num" }, w || r.d.pre_reveal_s == null ? "—" : (r.d.pre_reveal_s / 60).toFixed(1)), h("td", {}, flags),
+        h("td", { class: "num" }, w || r.d.pre_reveal_s == null ? "—" : (r.d.pre_reveal_s / 60).toFixed(1)),
         h("td", { class: "num" }, w ? "—" : r.d.f2 ?? "—"), h("td", { class: "num" }, w || r.d.ladder == null ? "—" : r.d.ladder.toFixed(2)), h("td", { class: "num" }, w || r.d.money == null ? "—" : "₹" + r.d.money)));
     });
   }
@@ -487,12 +441,12 @@
     DATA.all.forEach((r) => Object.keys(r.answers || {}).forEach((k) => { if (!answerKeys.includes(k)) answerKeys.push(k); }));
     const timingKeys = [];
     DATA.all.forEach((r) => Object.keys(r.timings || {}).forEach((k) => { if (!timingKeys.includes(k)) timingKeys.push(k); }));
-    const derivedKeys = ["f2", "trust", "realism", "ladder", "ladder_pre4", "ladder_post", "reveal_change", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "risk", "lambda", "money", "belief", "exp_loss", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_inattentive", "flag_test", "susp_auto", "susp_final"];
+    const derivedKeys = ["f2", "trust", "realism", "ladder", "ladder_pre4", "ladder_post", "reveal_change", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "risk", "lambda", "money", "belief", "exp_loss", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_inattentive", "flag_test", "susp_auto"];
     const head = ["id", "stage", "withdrawn", "cond", "frame", "affect", "name", "pref", "started_at", "submitted_at", "duration_s", "peeks", "source", "demo"]
-      .concat(answerKeys, timingKeys.map((k) => "t_" + k), derivedKeys.map((k) => "d_" + k), ["code_A", "code_B"]);
+      .concat(answerKeys, timingKeys.map((k) => "t_" + k), derivedKeys.map((k) => "d_" + k));
     const rows = DATA.all.map((r) => {
       const base = [r.id, r.stage, !!r.withdrawn, r.cond, r.frame || S.CONDITIONS[r.cond]?.frame, r.affect || S.CONDITIONS[r.cond]?.affect, r.name, r.pref, r.started_at, r.submitted_at, r.duration_s, r.peeks, r.meta?.source, !!r.meta?.demo];
-      return base.concat(answerKeys.map((k) => r.answers?.[k]), timingKeys.map((k) => r.timings?.[k]), derivedKeys.map((k) => r.d?.[k]), [r.code.A, r.code.B]);
+      return base.concat(answerKeys.map((k) => r.answers?.[k]), timingKeys.map((k) => r.timings?.[k]), derivedKeys.map((k) => r.d?.[k]));
     });
     return [head].concat(rows);
   }
@@ -563,12 +517,8 @@
   $("#refresh").addEventListener("click", load);
   $("#logout").addEventListener("click", () => { sessionSet("rtr_admin_key", ""); location.reload(); });
   $("#f-excl").addEventListener("change", (e) => { ui.applyExcl = e.target.checked; renderAll(); });
-  $("#f-susp").addEventListener("change", (e) => { ui.exclSusp = e.target.checked; renderAll(); });
   $("#f-match").addEventListener("change", (e) => { ui.match = e.target.value; renderAll(); });
   $("#stat-dv").addEventListener("change", () => renderStats(filtered()));
-  $("#coder").value = ui.coder;
-  $("#coder").addEventListener("change", (e) => { ui.coder = e.target.value; localSet("rtr_coder", ui.coder); renderCoding(); });
-  $("#only-uncoded").addEventListener("change", (e) => { ui.onlyUncoded = e.target.checked; renderCoding(); });
   $("#search").addEventListener("input", (e) => { ui.query = e.target.value; renderTable(); });
   $("#export-csv").addEventListener("click", () => download(`read-the-room_${new Date().toISOString().slice(0, 10)}.csv`, flatRows().map((r) => r.map(csvCell).join(",")).join("\n"), "text/csv"));
   $("#export-json").addEventListener("click", () => download(`read-the-room_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(RAW, null, 2), "application/json"));

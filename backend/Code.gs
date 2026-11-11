@@ -28,6 +28,8 @@ function doPost(e) {
       case "admin": requireKey(body.key); return json(adminData());
       case "code": requireKey(body.key); return json(saveCode(body.code));
       case "purgeTest": requireKey(body.key); return json(purgeTest());
+      case "importSim": requireKey(body.key); return json(importSim(body.records));
+      case "purgeSim": requireKey(body.key); return json(purgeSim());
       default: return json({ ok: false, error: "Unknown action" });
     }
   } catch (err) {
@@ -126,6 +128,36 @@ function purgeTest() {
     const ids = sh.getRange(1, 1, sh.getLastRow(), 1).getValues();
     for (let i = ids.length - 1; i >= 1; i--) {
       if (String(ids[i][0]).indexOf("TEST-") === 0) { sh.deleteRow(i + 1); removed++; }
+    }
+  });
+  return { ok: true, removed: removed };
+}
+
+// Simulated participants (allowed by the course instructor). Every id must start
+// with "SIM-" so simulated rows can always be told apart and removed.
+function importSim(records) {
+  if (!records || !records.length) throw new Error("No records");
+  if (records.some((r) => String(r.id).indexOf("SIM-") !== 0)) throw new Error("Simulated ids must start with SIM-");
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const now = new Date().toISOString();
+    assignmentsSheet().getRange(assignmentsSheet().getLastRow() + 1, 1, records.length, 5)
+      .setValues(records.map((r) => [r.id, r.started_at || now, r.pref || "none", r.cond, r.name]));
+    responsesSheet().getRange(responsesSheet().getLastRow() + 1, 1, records.length, 7)
+      .setValues(records.map((r) => [r.id, r.stage || "final", r.submitted_at || now, r.cond, r.name, false, JSON.stringify(r)]));
+    return { ok: true, imported: records.length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function purgeSim() {
+  let removed = 0;
+  [assignmentsSheet(), responsesSheet()].forEach((sh) => {
+    const ids = sh.getRange(1, 1, sh.getLastRow(), 1).getValues();
+    for (let i = ids.length - 1; i >= 1; i--) {
+      if (String(ids[i][0]).indexOf("SIM-") === 0) { sh.deleteRow(i + 1); removed++; }
     }
   });
   return { ok: true, removed: removed };

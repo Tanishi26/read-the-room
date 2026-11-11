@@ -14,6 +14,7 @@
   const ui = {
     key: sessionGet("rtr_admin_key"),
     applyExcl: true,
+    includeSim: true,
     match: "all",
     coder: localGet("rtr_coder") || "A",
     onlyUncoded: false,
@@ -204,8 +205,9 @@
   }
 
   function filtered() {
-    return DATA.valid.filter((r) => (!ui.applyExcl || !r.d.flags.length) && (ui.match === "all" || r.name === ui.match));
+    return DATA.valid.filter((r) => (!ui.applyExcl || !r.d.flags.length) && (ui.includeSim || !isSim(r)) && (ui.match === "all" || r.name === ui.match));
   }
+  const isSim = (r) => String(r.id).indexOf("SIM-") === 0;
   const cell = (rows, f, a) => rows.filter((r) => r.frame === f && (a == null || r.affect === a));
 
   // ---------- rendering ----------
@@ -249,7 +251,8 @@
     const excluded = DATA.valid.filter((r) => r.d.flags.length).length;
     el.appendChild(tile("Started", (RAW.assignments || []).length, "assigned to a condition"));
     const started = (RAW.assignments || []).length;
-    el.appendChild(tile("Submitted", DATA.valid.length, "completed the survey"));
+    const nSim = DATA.valid.filter(isSim).length;
+    el.appendChild(tile("Submitted", DATA.valid.length, nSim ? `${DATA.valid.length - nSim} real + ${nSim} simulated` : "completed the survey"));
     el.appendChild(tile("Dropped out", Math.max(0, started - DATA.valid.length), started ? Math.round((Math.max(0, started - DATA.valid.length) / started) * 100) + "% of those who started" : "started but didn't submit"));
     el.appendChild(tile("Excluded", excluded, "failed both attention and app checks, or test runs"));
     el.appendChild(tile("Median time", DATA.median ? Math.round(DATA.median / 60) + " min" : "—", "before the reveal"));
@@ -442,10 +445,10 @@
     const timingKeys = [];
     DATA.all.forEach((r) => Object.keys(r.timings || {}).forEach((k) => { if (!timingKeys.includes(k)) timingKeys.push(k); }));
     const derivedKeys = ["f2", "trust", "realism", "ladder", "ladder_pre4", "ladder_post", "reveal_change", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "risk", "lambda", "money", "belief", "exp_loss", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_inattentive", "flag_test", "susp_auto"];
-    const head = ["id", "stage", "withdrawn", "cond", "frame", "affect", "name", "pref", "started_at", "submitted_at", "duration_s", "peeks", "source", "demo"]
+    const head = ["id", "stage", "withdrawn", "cond", "frame", "affect", "name", "pref", "started_at", "submitted_at", "duration_s", "peeks", "source", "simulated", "persona", "demo"]
       .concat(answerKeys, timingKeys.map((k) => "t_" + k), derivedKeys.map((k) => "d_" + k));
     const rows = DATA.all.map((r) => {
-      const base = [r.id, r.stage, !!r.withdrawn, r.cond, r.frame || S.CONDITIONS[r.cond]?.frame, r.affect || S.CONDITIONS[r.cond]?.affect, r.name, r.pref, r.started_at, r.submitted_at, r.duration_s, r.peeks, r.meta?.source, !!r.meta?.demo];
+      const base = [r.id, r.stage, !!r.withdrawn, r.cond, r.frame || S.CONDITIONS[r.cond]?.frame, r.affect || S.CONDITIONS[r.cond]?.affect, r.name, r.pref, r.started_at, r.submitted_at, r.duration_s, r.peeks, r.meta?.source, isSim(r), r.meta?.persona || "", !!r.meta?.demo];
       return base.concat(answerKeys.map((k) => r.answers?.[k]), timingKeys.map((k) => r.timings?.[k]), derivedKeys.map((k) => r.d?.[k]));
     });
     return [head].concat(rows);
@@ -517,6 +520,7 @@
   $("#refresh").addEventListener("click", load);
   $("#logout").addEventListener("click", () => { sessionSet("rtr_admin_key", ""); location.reload(); });
   $("#f-excl").addEventListener("change", (e) => { ui.applyExcl = e.target.checked; renderAll(); });
+  $("#f-sim").addEventListener("change", (e) => { ui.includeSim = e.target.checked; renderAll(); });
   $("#f-match").addEventListener("change", (e) => { ui.match = e.target.value; renderAll(); });
   $("#stat-dv").addEventListener("change", () => renderStats(filtered()));
   $("#search").addEventListener("input", (e) => { ui.query = e.target.value; renderTable(); });

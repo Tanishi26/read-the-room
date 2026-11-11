@@ -5,8 +5,6 @@ window.STUDY_CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxiWQqiXqQOQY3bmtJ8nDW7UrjANbtFm2trVOC1OPgVYCLj6f2qnOc7a3WX5a-cPcxe/exec",
 
   STUDY_ID: "read-the-room-v3",
-  TARGET_TOTAL: 240,
-  TARGET_PER_CELL: 40,
   MIN_VIGNETTE_SECONDS: 20,
 
   // Only used in local test mode. In live mode the admin key lives in the Apps Script.

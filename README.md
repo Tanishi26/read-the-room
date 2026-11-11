@@ -84,7 +84,7 @@ Share only the participant link (`…/index.html`). Add `?src=whatsapp` or `?src
 
 ## Dashboard
 
-- **Key numbers and cell balance:** progress against the target of 240 (40 per cell).
+- **Key numbers and cell balance:** analysable responses, submissions, dropouts and the number of responses in each of the 6 conditions.
 - **Quick stats:** a Type III 2 × 3 ANOVA plus the two planned contrasts (H1 Loss − Gain, H2 Urgency − Loss), on F2, the ladder mean, or money sent. **This is a preview only.** Run the pre-registered models in R for the report.
 - **Charts** (each has a Table view):
   - focal compliance
@@ -94,7 +94,7 @@ Share only the participant link (`…/index.html`). Add `?src=whatsapp` or `?src
   - before vs after the reveal (4 steps)
   - trust
   - manipulation-check table
-- **Exclusions** (toggle): failed attention check, wrong app in the comprehension check, vignette under 20 s, or total time under one-third of the median.
+- **Exclusions** (toggle): only participants who failed **both** the attention check and the "which app?" check, plus TEST runs. A single missed check is shown as a grey tag but does not exclude.
 - **Suspicion coding:** one teammate codes as A and the other as B, each blind to the other's codes. Cohen's κ updates live. Keyword matches are highlighted.
 - **Export CSV:** one row per participant, with every answer, screen timings, derived variables (`d_` prefix: trust, ladder mean, stop point, reveal change, expected loss, flags…) and both coders' codes. It's ready for R.
 

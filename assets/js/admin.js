@@ -188,7 +188,8 @@
     d.susp_auto = d.susp_words.length > 0;
     d.flag_attention = a.Q10_6 !== 3;
     d.flag_comprehension = a.Q10_8 !== "WhatsApp";
-    d.flag_vignette = d.vignette_s != null && d.vignette_s < CFG.MIN_VIGNETTE_SECONDS;
+    // Lenient rule: exclude only when BOTH checks fail (clearly not reading).
+    d.flag_inattentive = d.flag_attention && d.flag_comprehension;
     return d;
   }
 
@@ -199,9 +200,10 @@
     const valid = all.filter((r) => !(r.withdrawn || r.stage === "withdrawn"));
     const med = median(valid.map((r) => r.d.pre_reveal_s));
     valid.forEach((r) => {
-      r.d.flag_speeder = med != null && r.d.pre_reveal_s != null && r.d.pre_reveal_s < med / 3;
       r.d.flag_test = String(r.id).indexOf("TEST-") === 0;
-      r.d.flags = ["test", "attention", "comprehension", "vignette", "speeder"].filter((f) => r.d["flag_" + f]);
+      r.d.flags = ["test", "inattentive"].filter((f) => r.d["flag_" + f]);
+      // Single failed checks are shown for information but do not exclude.
+      r.d.notes = r.d.flag_inattentive ? [] : ["attention", "comprehension"].filter((f) => r.d["flag_" + f]).map((f) => f + " check missed");
       const A = r.code.A, B = r.code.B;
       r.d.susp_final = A != null && B != null ? A || B : A != null ? A : B != null ? B : r.d.susp_auto;
       r.d.susp_source = A != null || B != null ? "coded" : "auto";
@@ -249,19 +251,17 @@
   function renderKPIs(rows) {
     const el = $("#kpis");
     el.innerHTML = "";
-    const pct = Math.min(100, Math.round((rows.length / CFG.TARGET_TOTAL) * 100));
     el.appendChild(h("div", { class: "tile hero" },
       h("div", { class: "tile-label" }, "Analysable responses"),
-      h("div", { class: "hero-value" }, rows.length, h("span", {}, " / " + CFG.TARGET_TOTAL)),
-      h("div", { class: "meter", role: "img", "aria-label": pct + "% of target" }, h("span", { style: `width:${pct}%` })),
-      h("div", { class: "tile-sub" }, `${pct}% of target · minimum 180`)));
+      h("div", { class: "hero-value" }, rows.length),
+      h("div", { class: "tile-sub" }, "after the current filters")));
     const excluded = DATA.valid.filter((r) => r.d.flags.length).length;
     const susp = DATA.valid.filter((r) => r.d.susp_final).length;
     el.appendChild(tile("Started", (RAW.assignments || []).length, "assigned to a condition"));
     const started = (RAW.assignments || []).length;
     el.appendChild(tile("Submitted", DATA.valid.length, "completed the survey"));
     el.appendChild(tile("Dropped out", Math.max(0, started - DATA.valid.length), started ? Math.round((Math.max(0, started - DATA.valid.length) / started) * 100) + "% of those who started" : "started but didn't submit"));
-    el.appendChild(tile("Flagged for exclusion", excluded, "attention, comprehension, speed"));
+    el.appendChild(tile("Excluded", excluded, "failed both attention and app checks, or test runs"));
     el.appendChild(tile("Suspicious", susp, "auto keyword or coded"));
     el.appendChild(tile("Median time", DATA.median ? Math.round(DATA.median / 60) + " min" : "—", "before the reveal"));
   }
@@ -272,9 +272,7 @@
     const table = h("table", { class: "grid-table" },
       h("thead", {}, h("tr", {}, h("th", {}, ""), FRAMES.map((f) => h("th", {}, CAP[f])))),
       h("tbody", {}, AFFECTS.map((a) => h("tr", {}, h("th", {}, CAP[a]), FRAMES.map((f) => {
-        const n = cell(rows, f, a).length;
-        const p = Math.min(100, (n / CFG.TARGET_PER_CELL) * 100);
-        return h("td", {}, h("div", { class: "cell-n" }, n, h("span", {}, " / " + CFG.TARGET_PER_CELL)), h("div", { class: "meter sm" }, h("span", { style: `width:${p}%` })));
+        return h("td", {}, h("div", { class: "cell-n" }, cell(rows, f, a).length));
       })))));
     el.appendChild(table);
     const byName = ["Arjun", "Ananya", "Kiran"].map((n) => `${n}: ${rows.filter((r) => r.name === n).length}`).join(" · ");
@@ -437,10 +435,9 @@
     const mine = (r) => r.code[ui.coder];
     const list = DATA.valid.filter((r) => !ui.onlyUncoded || mine(r) == null).slice().reverse();
     if (!list.length) { el.appendChild(h("p", { class: "muted" }, "Nothing to code.")); return; }
-    list.slice(0, 60).forEach((r) => {
-      let txt = esc(r.answers.Q8_1 || "—");
-      let txt2 = esc(r.answers.Q8_2 || "");
-      S.SUSPICION_WORDS.forEach((w) => { const re = new RegExp("(" + w + "\\w*)", "gi"); txt = txt.replace(re, "<mark>$1</mark>"); txt2 = txt2.replace(re, "<mark>$1</mark>"); });
+    list.forEach((r) => {
+      let txt = esc(r.answers.Q8_1 || "(no answer)");
+      S.SUSPICION_WORDS.forEach((w) => { txt = txt.replace(new RegExp("(" + w + "\\w*)", "gi"), "<mark>$1</mark>"); });
       const state = mine(r);
       const btn = (val, label) => h("button", { type: "button", class: "seg" + (state === val ? " on" : ""), onclick: async (e) => {
         e.currentTarget.parentNode.querySelectorAll(".seg").forEach((b) => b.classList.remove("on"));
@@ -457,7 +454,7 @@
         } catch (err) { alert("Could not save code: " + err.message); }
       } }, label);
       el.appendChild(h("div", { class: "code-row" },
-        h("div", { class: "code-text" }, h("div", { class: "muted small" }, r.id + (r.d.susp_auto ? " · keyword match" : "")), h("p", { html: txt }), txt2 ? h("p", { class: "muted", html: "Unusual: " + txt2 }) : null),
+        h("div", { class: "code-text" }, h("div", { class: "muted small" }, r.id + (r.d.susp_auto ? " · keyword match" : "")), h("p", { html: txt })),
         h("div", { class: "segs" }, btn(true, "Suspicious"), btn(false, "Not suspicious"))));
     });
   }
@@ -469,7 +466,7 @@
     const q = ui.query.toLowerCase();
     DATA.all.slice().reverse().filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q)).slice(0, 300).forEach((r) => {
       const w = r.withdrawn || r.stage === "withdrawn";
-      const flags = w ? [h("span", { class: "pill" }, "withdrawn")] : r.d.flags.map((f) => h("span", { class: "pill warn" }, f)).concat(r.d.susp_final ? [h("span", { class: "pill" }, "suspicious")] : []);
+      const flags = w ? [h("span", { class: "pill" }, "withdrawn")] : r.d.flags.map((f) => h("span", { class: "pill warn" }, f)).concat(r.d.notes.map((n) => h("span", { class: "pill info" }, n)),r.d.susp_final ? [h("span", { class: "pill" }, "suspicious")] : []);
       tb.appendChild(h("tr", { class: "clickable", tabindex: 0, onclick: () => detail(r), onkeydown: (e) => { if (e.key === "Enter") detail(r); } },
         h("td", { class: "mono" }, r.id), h("td", {}, r.submitted_at ? new Date(r.submitted_at).toLocaleString() : "—"), h("td", {}, r.stage || "—"),
         h("td", {}, r.cond ? `${r.cond} ${CAP[S.CONDITIONS[r.cond].frame]}·${S.CONDITIONS[r.cond].affect}` : "—"), h("td", {}, r.name || "—"),
@@ -490,7 +487,7 @@
     DATA.all.forEach((r) => Object.keys(r.answers || {}).forEach((k) => { if (!answerKeys.includes(k)) answerKeys.push(k); }));
     const timingKeys = [];
     DATA.all.forEach((r) => Object.keys(r.timings || {}).forEach((k) => { if (!timingKeys.includes(k)) timingKeys.push(k); }));
-    const derivedKeys = ["f2", "trust", "realism", "ladder", "ladder_pre4", "ladder_post", "reveal_change", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "risk", "lambda", "money", "belief", "exp_loss", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_vignette", "flag_speeder", "susp_auto", "susp_final"];
+    const derivedKeys = ["f2", "trust", "realism", "ladder", "ladder_pre4", "ladder_post", "reveal_change", "stop", "lonely", "mc_affect", "mc_urgency", "mc_gain", "mc_loss", "risk", "lambda", "money", "belief", "exp_loss", "pre_reveal_s", "vignette_s", "flag_attention", "flag_comprehension", "flag_inattentive", "flag_test", "susp_auto", "susp_final"];
     const head = ["id", "stage", "withdrawn", "cond", "frame", "affect", "name", "pref", "started_at", "submitted_at", "duration_s", "peeks", "source", "demo"]
       .concat(answerKeys, timingKeys.map((k) => "t_" + k), derivedKeys.map((k) => "d_" + k), ["code_A", "code_B"]);
     const rows = DATA.all.map((r) => {
